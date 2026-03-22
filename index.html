@@ -146,18 +146,56 @@
     }
 
     // 2. SUBIR VIDEO (Cloudinary + Google Sheets)
-    document.getElementById('file-selector').onchange = async function(e) {
-        const archivo = e.target.files[0];
-        if (!archivo) return;
+   document.getElementById('file-selector').onchange = async function(e) {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
 
-        alert("Iniciando subida... No cierres la página hasta que termine.");
+    alert("1. Iniciando subida a Cloudinary...");
 
-        // A. Subir a Cloudinary
-        const formData = new FormData();
-        formData.append('file', archivo);
-        formData.append('upload_preset', UPLOAD_PRESET);
+    const formData = new FormData();
+    formData.append('file', archivo);
+    formData.append('upload_preset', UPLOAD_PRESET);
 
-        try {
+    try {
+        // A. SUBIR A CLOUDINARY
+        const resCloud = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        const dataCloud = await resCloud.json();
+
+        // Verificamos si Cloudinary nos dio el link
+        if (!dataCloud.secure_url) {
+            alert("Error: Cloudinary no devolvió un link. Revisa tu Cloud Name y Preset.");
+            console.log(dataCloud);
+            return;
+        }
+
+        alert("2. Video en la nube. Guardando en Google Sheets...");
+
+        // B. GUARDAR EN GOOGLE SHEETS
+        const datosVideo = {
+            nombre: archivo.name.split('.')[0],
+            url: dataCloud.secure_url, // ESTE ES EL LINK QUE FALTA
+            id: Date.now()
+        };
+
+        // Usamos una técnica más compatible para enviar datos a Google
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Muy importante para Google Scripts
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosVideo)
+        });
+
+        alert("3. ¡Éxito! El video ya debería aparecer en la lista.");
+        setTimeout(() => location.reload(), 1000); // Recarga la página para ver los cambios
+
+    } catch (err) {
+        alert("Hubo un error crítico: " + err.message);
+        console.error(err);
+    }
+};
             const resCloud = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
                 method: 'POST',
                 body: formData
